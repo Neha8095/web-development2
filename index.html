@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Bank Simulator</title>
+
+<style>
+body {
+  font-family: Arial;
+  background: linear-gradient(135deg, #4facfe, #00f2fe, #43e97b);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+.container {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 25px;
+  width: 340px;
+  border-radius: 15px;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+h2 {
+  color: #333;
+}
+
+input {
+  padding: 10px;
+  margin: 6px;
+  width: 90%;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+button {
+  padding: 10px 15px;
+  margin: 5px;
+  border: none;
+  border-radius: 8px;
+  background: #4facfe;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+button:hover {
+  background: #007bff;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+li {
+  background: #f1f1f1;
+  margin: 5px;
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.alert {
+  color: red;
+  font-weight: bold;
+}
+</style>
+
+</head>
+<body>
+
+<div class="container">
+
+<h2>🏦 Bank Account Simulator</h2>
+
+<!-- Create Account -->
+<div id="createSection">
+  <h3>Create Account</h3>
+
+  <input 
+    type="text" 
+    id="newAcc" 
+    placeholder="11 Digit Account Number"
+    maxlength="11"
+  >
+
+  <input 
+    type="password" 
+    id="newPin" 
+    placeholder="4 Digit PIN"
+    maxlength="4"
+  >
+
+  <button onclick="createAccount()">Create</button>
+</div>
+
+<!-- Login -->
+<div id="loginSection">
+  <h3>Login</h3>
+
+  <input 
+    type="text" 
+    id="accNo" 
+    placeholder="11 Digit Account Number"
+    maxlength="11"
+  >
+
+  <input 
+    type="password" 
+    id="pin" 
+    placeholder="4 Digit PIN"
+    maxlength="4"
+  >
+
+  <button onclick="login()">Login</button>
+</div>
+
+<!-- Banking Section -->
+<div id="bankSection" style="display:none;">
+
+  <h3>Balance: ₹ <span id="balance">0</span></h3>
+
+  <input type="number" id="amount" placeholder="Enter Amount">
+
+  <div>
+    <button onclick="deposit()">Deposit</button>
+    <button onclick="withdraw()">Withdraw</button>
+  </div>
+
+  <div>
+    <button onclick="addInterest()">Add Interest</button>
+    <button onclick="saveData()">Save</button>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <h3>Transaction History</h3>
+
+  <ul id="history"></ul>
+
+  <p id="alertMsg" class="alert"></p>
+
+</div>
+
+</div>
+
+<script>
+
+let currentUser = null;
+let MIN_BALANCE = 500;
+
+// Create Account
+function createAccount() {
+
+  let acc = document.getElementById("newAcc").value;
+  let pin = document.getElementById("newPin").value;
+
+  // Validation
+  if (!/^\d{11}$/.test(acc)) {
+    alert("Account Number must be exactly 11 digits!");
+    return;
+  }
+
+  if (!/^\d{4}$/.test(pin)) {
+    alert("PIN must be exactly 4 digits!");
+    return;
+  }
+
+  let accounts = JSON.parse(localStorage.getItem("accounts")) || {};
+
+  if (accounts[acc]) {
+    alert("Account already exists!");
+    return;
+  }
+
+  accounts[acc] = {
+    pin: pin,
+    balance: 0,
+    history: []
+  };
+
+  localStorage.setItem("accounts", JSON.stringify(accounts));
+
+  alert("Account Created Successfully!");
+}
+
+// Login
+function login() {
+
+  let acc = document.getElementById("accNo").value;
+  let pinVal = document.getElementById("pin").value;
+
+  let accounts = JSON.parse(localStorage.getItem("accounts")) || {};
+
+  if (accounts[acc] && accounts[acc].pin === pinVal) {
+
+    currentUser = acc;
+
+    document.getElementById("createSection").style.display = "none";
+    document.getElementById("loginSection").style.display = "none";
+    document.getElementById("bankSection").style.display = "block";
+
+    updateUI();
+
+  } else {
+    alert("Invalid Login!");
+  }
+}
+
+// Get Account
+function getAcc() {
+
+  let accounts = JSON.parse(localStorage.getItem("accounts"));
+
+  return accounts[currentUser];
+}
+
+// Save Account
+function saveAcc(data) {
+
+  let accounts = JSON.parse(localStorage.getItem("accounts"));
+
+  accounts[currentUser] = data;
+
+  localStorage.setItem("accounts", JSON.stringify(accounts));
+}
+
+// Update UI
+function updateUI() {
+
+  let acc = getAcc();
+
+  document.getElementById("balance").textContent = acc.balance;
+
+  let historyList = document.getElementById("history");
+
+  historyList.innerHTML = "";
+
+  acc.history.forEach(item => {
+
+    let li = document.createElement("li");
+
+    li.textContent = item;
+
+    historyList.appendChild(li);
+
+  });
+
+  let msg = document.getElementById("alertMsg");
+
+  if (acc.balance < MIN_BALANCE) {
+    msg.textContent = "⚠ Minimum balance below ₹500";
+  } else {
+    msg.textContent = "";
+  }
+}
+
+// Deposit
+function deposit() {
+
+  let amt = parseFloat(document.getElementById("amount").value);
+
+  let acc = getAcc();
+
+  if (amt > 0) {
+
+    acc.balance += amt;
+
+    acc.history.push("Deposited ₹" + amt);
+
+    saveAcc(acc);
+
+    updateUI();
+  }
+}
+
+// Withdraw
+function withdraw() {
+
+  let amt = parseFloat(document.getElementById("amount").value);
+
+  let acc = getAcc();
+
+  if (amt > 0 && amt <= acc.balance) {
+
+    acc.balance -= amt;
+
+    acc.history.push("Withdrawn ₹" + amt);
+
+    saveAcc(acc);
+
+    updateUI();
+
+  } else {
+
+    alert("Invalid Withdrawal!");
+
+  }
+}
+
+// Interest Calculator
+function addInterest() {
+
+  let acc = getAcc();
+
+  let interest = acc.balance * 0.05;
+
+  acc.balance += interest;
+
+  acc.history.push("Interest Added ₹" + interest.toFixed(2));
+
+  saveAcc(acc);
+
+  updateUI();
+}
+
+// Save File
+function saveData() {
+
+  let data = getAcc();
+
+  let blob = new Blob(
+    [JSON.stringify(data, null, 2)],
+    { type: "application/json" }
+  );
+
+  let a = document.createElement("a");
+
+  a.href = URL.createObjectURL(blob);
+
+  a.download = "account.json";
+
+  a.click();
+}
+
+// Logout
+function logout() {
+
+  location.reload();
+
+}
+
+</script>
+
+</body>
+</html>
